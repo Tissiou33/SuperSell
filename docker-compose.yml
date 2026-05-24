@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopdesk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shopdesk
+      POSTGRES_USER: shopdesk
+      POSTGRES_PASSWORD: shopdesk2026
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopdesk"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: shopdesk-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://shopdesk:shopdesk2026@postgres:5432/shopdesk
+      JWT_SECRET: shopdesk-secret-key-change-in-production
+      PORT: 8080
+      NODE_ENV: production
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/exports:/app/exports
+
+  frontend:
+    build: ./frontend
+    container_name: shopdesk-web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
